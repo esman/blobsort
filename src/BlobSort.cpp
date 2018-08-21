@@ -149,10 +149,7 @@ public:
 
 		std::unique_lock<std::mutex> lock(m_mutex);
 
-		while (m_queue.empty())
-		{
-			m_queueCond.wait(lock);
-		}
+		m_queueCond.wait(lock, [=](){ return !m_queue.empty(); });
 
 		chunk.m_buff = m_queue.front();
 		m_queue.pop();
@@ -188,6 +185,7 @@ private:
  */
 fs::path CreateUniqueTempDirectory(const std::string& pathTemplate)
 {
+	// Need to make a copy as mkdtemp returns a pointer to the modified template string
 	std::vector<char> buff(pathTemplate.size() + 1);
 
 	strncpy(buff.data(), pathTemplate.data(), buff.size());
@@ -275,6 +273,7 @@ struct Blob32Sorter
 
 	void MergeChunks(const fs::path& left, const fs::path& right, const fs::path& result)
 	{
+		// Use printf here instead of std::cout to avoid interleaving messages from different threads
 		printf("Merging %s and %s into %s\n", left.c_str(), right.c_str(), result.c_str());
 
 		std::ifstream leftStrm(left, std::ios::binary);
