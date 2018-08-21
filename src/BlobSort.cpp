@@ -295,21 +295,22 @@ struct Blob32Sorter
 
 	fs::path MapReduceChunks(uintmax_t offset, uintmax_t size, const fs::path& fileName)
 	{
-		auto halfSize = size / 2;
+		auto leftSize = (size / 2) & ((uintmax_t) sizeof(uint32_t));
+		auto rightSize = size - leftSize;
 		auto leftOffset = offset;
-		auto rightOffset = offset + halfSize;
+		auto rightOffset = offset + leftSize;
 
 		auto leftBranch = std::async(std::launch::async, [=]()
-		{	return MapReduceOrCreateSortedChunks(leftOffset, halfSize);});
+		{	return MapReduceOrCreateSortedChunks(leftOffset, leftSize);});
 		auto rightBranch = std::async(std::launch::async, [=]()
-		{	return MapReduceOrCreateSortedChunks(rightOffset, halfSize);});
+		{	return MapReduceOrCreateSortedChunks(rightOffset, rightSize);});
 
 		leftBranch.wait();
 		rightBranch.wait();
 
 		auto leftChunkFileName = leftBranch.get();
 		auto rightChunkFileName = rightBranch.get();
-		auto mergedFileName = (size < m_inFileSize) ? CreateChunkFileName(offset, size) : m_outFilePath;
+		auto mergedFileName = fileName.empty() ? CreateChunkFileName(offset, size) : fileName;
 
 		MergeChunks(leftChunkFileName, rightChunkFileName, mergedFileName);
 
