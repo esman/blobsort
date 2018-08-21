@@ -10,10 +10,16 @@
 #include <string>
 #include <stdexcept>
 
-namespace ring {
+namespace ring
+{
 
-class SortException: public std::runtime_error {
-	public: SortException(const std::string& msg): std::runtime_error(msg) {}
+class SortException: public std::runtime_error
+{
+public:
+	SortException(const std::string& msg)
+		: std::runtime_error(msg)
+	{
+	}
 };
 
 /**

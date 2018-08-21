@@ -45,7 +45,7 @@ class Uint32Value
 
 public:
 	bool operator<(const Uint32Value& other) const
-	{
+		{
 		return m_value < other.m_value;
 	}
 
@@ -84,8 +84,9 @@ public:
 		Chunk(const Chunk&) = delete;
 		Chunk& operator=(const Chunk&) = delete;
 
-		Chunk(Chunk&& other):
-			m_pool(other.m_pool)
+		Chunk(Chunk&& other)
+			:
+				m_pool(other.m_pool)
 		{
 			std::swap(m_buff, other.m_buff);
 		}
@@ -108,7 +109,8 @@ public:
 	private:
 		explicit Chunk(SimpleBlockingMemoryPool& pool)
 			: m_pool(pool)
-		{}
+		{
+		}
 
 		SimpleBlockingMemoryPool& m_pool;
 		char* m_buff = nullptr;
@@ -201,10 +203,10 @@ fs::path CreateUniqueTempDirectory(const std::string& pathTemplate)
 struct Blob32Sorter
 {
 	Blob32Sorter(const std::string& inFilePath, const std::string& outFilePath)
-			: m_inFilePath(inFilePath)
+		: m_inFilePath(inFilePath)
 			, m_outFilePath(outFilePath)
 			, m_inFileSize(fs::file_size(inFilePath))
-		    , m_tempDirPath(CreateUniqueTempDirectory(fs::temp_directory_path() / "blobsort_XXXXXX"))
+			, m_tempDirPath(CreateUniqueTempDirectory(fs::temp_directory_path() / "blobsort_XXXXXX"))
 			, m_memoryChunkSize(CalcMemoryChunkSize())
 			, m_memPool(m_memoryChunkSize, MAX_ALLOCATED_MEMORY_SIZE / m_memoryChunkSize)
 	{
@@ -225,7 +227,7 @@ struct Blob32Sorter
 
 	static int CalcMemoryChunkSize()
 	{
-		 // Two chunks per CPU core
+		// Two chunks per CPU core
 		return MAX_ALLOCATED_MEMORY_SIZE / (std::thread::hardware_concurrency() * 2);
 	}
 
@@ -282,7 +284,7 @@ struct Blob32Sorter
 
 		std::merge(std::istream_iterator<Uint32Value>(leftStrm), eos,
 			std::istream_iterator<Uint32Value>(rightStrm), eos,
-			std::ostream_iterator<Uint32Value>(resultStrm) );
+			std::ostream_iterator<Uint32Value>(resultStrm));
 
 		if (leftStrm.bad() || rightStrm.bad() || resultStrm.bad())
 		{
@@ -296,8 +298,10 @@ struct Blob32Sorter
 		auto leftOffset = offset;
 		auto rightOffset = offset + halfSize;
 
-		auto leftBranch  = std::async(std::launch::async, [=](){ return MapReduceOrCreateSortedChunks(leftOffset, halfSize); });
-		auto rightBranch = std::async(std::launch::async, [=](){ return MapReduceOrCreateSortedChunks(rightOffset, halfSize); });
+		auto leftBranch = std::async(std::launch::async, [=]()
+		{	return MapReduceOrCreateSortedChunks(leftOffset, halfSize);});
+		auto rightBranch = std::async(std::launch::async, [=]()
+		{	return MapReduceOrCreateSortedChunks(rightOffset, halfSize);});
 
 		leftBranch.wait();
 		rightBranch.wait();
