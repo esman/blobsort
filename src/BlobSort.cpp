@@ -343,7 +343,14 @@ struct Blob32Sorter
 
 void SortBlob32(const std::string& inFilePath, const std::string& outFilePath)
 {
-	Blob32Sorter(inFilePath, outFilePath).Sort();
+	try
+	{
+		Blob32Sorter(inFilePath, outFilePath).Sort();
+	}
+	catch (const std::system_error& e)
+	{
+		throw SortException(e.what());
+	}
 }
 
 } /* namespace ring */
