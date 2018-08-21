@@ -30,7 +30,7 @@ namespace
 {
 
 constexpr auto MAX_ALLOCATED_MEMORY_SIZE = 256LL << 20; ///< 256Mb - Max allowed memory allocation size
-constexpr auto FILE_SIZE_MULTIPLIER = 4LL << 30; ///<  4Gb - File size must be a multiple of this
+constexpr auto FILE_SIZE_MULTIPLIER = 4; ///<  4byte - File size must be a multiple of this
 
 /**
  * @brief uint32_t wrapper class
@@ -229,11 +229,11 @@ struct Blob32Sorter
 		return MAX_ALLOCATED_MEMORY_SIZE / (std::thread::hardware_concurrency() * 2);
 	}
 
-	void ReadChunk(char* chunk, uintmax_t offset)
+	void ReadChunk(char* chunk, uintmax_t offset, uintmax_t size)
 	{
 		std::ifstream strm(m_inFilePath, std::ios::binary);
 
-		if (!strm.seekg(offset, std::ios::beg).read(chunk, m_memoryChunkSize))
+		if (!strm.seekg(offset, std::ios::beg).read(chunk, size))
 		{
 			throw SortException("Failed to read input chunk");
 		}
@@ -244,31 +244,33 @@ struct Blob32Sorter
 		std::stringstream strm;
 
 		strm << std::hex << std::setfill('0')
-			<< std::setw(3) << (m_inFileSize / size) << ':'
-			<< std::setw(3) << offset / size;
+			<< std::setw(8) << offset << ':'
+			<< std::setw(8) << size;
 
 		return m_tempDirPath / strm.str();
 	}
 
-	auto CreateSortedChunk(uintmax_t offset)
+	auto CreateSortedChunk(uintmax_t offset, uintmax_t size, const fs::path& fileName)
 	{
 		auto chunk = m_memPool.Acquire();
-		ReadChunk(chunk, offset);
+		ReadChunk(chunk, offset, size);
 
 		auto begin = reinterpret_cast<uint32_t*>(chunk.Data());
-		auto end = reinterpret_cast<uint32_t*>(chunk + m_memoryChunkSize);
+		auto end = reinterpret_cast<uint32_t*>(chunk + size);
 
 		std::sort(begin, end);
 
-		auto fileName = CreateChunkFileName(offset, m_memoryChunkSize);
-		std::ofstream strm(fileName, std::ios::binary);
+		auto chunkFileName = fileName.empty() ? CreateChunkFileName(offset, size) :
+			fileName;
 
-		if (!strm.write(chunk, m_memoryChunkSize))
+		std::ofstream strm(chunkFileName, std::ios::binary);
+
+		if (!strm.write(chunk, size))
 		{
 			throw SortException("Failed to open file to write sorted chunk");
 		}
 
-		return fileName;
+		return chunkFileName;
 	}
 
 	void MergeChunks(const fs::path& left, const fs::path& right, const fs::path& result)
@@ -291,7 +293,7 @@ struct Blob32Sorter
 		}
 	}
 
-	fs::path MapReduceChunks(uintmax_t offset, uintmax_t size)
+	fs::path MapReduceChunks(uintmax_t offset, uintmax_t size, const fs::path& fileName)
 	{
 		auto halfSize = size / 2;
 		auto leftOffset = offset;
@@ -318,14 +320,15 @@ struct Blob32Sorter
 		return mergedFileName;
 	}
 
-	fs::path MapReduceOrCreateSortedChunks(uintmax_t offset, uintmax_t size)
+	fs::path MapReduceOrCreateSortedChunks(uintmax_t offset, uintmax_t size, const fs::path& fileName = fs::path())
 	{
-		return (size > m_memoryChunkSize) ? MapReduceChunks(offset, size) : CreateSortedChunk(offset);
+		return (size > m_memoryChunkSize) ? MapReduceChunks(offset, size, fileName) :
+			CreateSortedChunk(offset, size, fileName);
 	}
 
 	void Sort()
 	{
-		MapReduceOrCreateSortedChunks(0, m_inFileSize);
+		MapReduceOrCreateSortedChunks(0, m_inFileSize, m_outFilePath);
 	}
 
 	const fs::path m_inFilePath;
