@@ -295,7 +295,7 @@ struct Blob32Sorter
 
 	fs::path MapReduceChunks(uintmax_t offset, uintmax_t size, const fs::path& fileName)
 	{
-		auto leftSize = (size / 2) & ((uintmax_t) sizeof(uint32_t));
+		auto leftSize = (size / 2) & (~((uintmax_t) sizeof(uint32_t)));
 		auto rightSize = size - leftSize;
 		auto leftOffset = offset;
 		auto rightOffset = offset + leftSize;
