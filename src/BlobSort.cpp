@@ -33,6 +33,15 @@ constexpr auto MAX_ALLOCATED_MEMORY_SIZE = 256LL << 20; ///< 256Mb - Max allowed
 constexpr auto FILE_SIZE_MULTIPLIER = 4; ///<  4byte - File size must be a multiple of this
 
 /**
+ * Round up function (as suggested by Tigran Avanesov)
+ */
+template <typename T>
+T RoundUp(T num, T factor)
+{
+    return num + factor - 1 - (num - 1) % factor;
+}
+
+/**
  * @brief uint32_t wrapper class
  *
  * Wrapper class to enable uint32_t streamed input/output.
@@ -295,7 +304,7 @@ struct Blob32Sorter
 
 	fs::path MapReduceChunks(uintmax_t offset, uintmax_t size, const fs::path& fileName)
 	{
-		auto leftSize = (size / 2) & (~((uintmax_t) sizeof(uint32_t)));
+		auto leftSize = RoundUp(size / 2, sizeof(uint32_t));
 		auto rightSize = size - leftSize;
 		auto leftOffset = offset;
 		auto rightOffset = offset + leftSize;
